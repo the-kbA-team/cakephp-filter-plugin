@@ -4,15 +4,15 @@ App::uses('Controller', 'Controller');
 
 class DocumentTestsController extends Controller
 {
-	public $name = 'DocumentTests';
+    public $name = 'DocumentTests';
 
-	public function index()
-	{
-	}
+    public function index()
+    {
+    }
 
-	// must override this or the tests never complete..
-	// @TODO: mock partial?
-	public function redirect($url, $status = null, $exit = true)
-	{
-	}
+    // must override this or the tests never complete..
+    // @TODO: mock partial?
+    public function redirect($url, $status = null, $exit = true)
+    {
+    }
 }
