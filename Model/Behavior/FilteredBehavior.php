@@ -136,7 +136,7 @@ class FilteredBehavior extends ModelBehavior
         // model and field we're using to filter the data
         $filterFieldName = $configurationFieldName;
         $filterModelName = $configurationModelName;
-        $linkModelName = null;
+        $linkModelName = '';
         $relationType = null;
 
         if ($configurationModelName != $Model->alias) {
