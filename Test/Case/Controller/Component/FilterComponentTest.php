@@ -23,6 +23,9 @@ App::uses('Metadata', 'Filter.Test/Case/MockObjects');
 
 class FilterComponentTest extends CakeTestCase
 {
+    /**
+     * @var string[]
+     */
     public $fixtures = array
     (
         'plugin.filter.document_category',
@@ -31,7 +34,10 @@ class FilterComponentTest extends CakeTestCase
         'plugin.filter.metadata',
     );
 
-    public $Controller = null;
+    /**
+     * @var \DocumentTestsController
+     */
+    public $Controller;
 
     public function startTest($method)
     {
@@ -61,17 +67,21 @@ class FilterComponentTest extends CakeTestCase
     public function endTest($method)
     {
         $this->Controller->Session->destroy();
-        $this->Controller = null;
+        unset($this->Controller);
     }
 
     /**
      * Test bailing out when no filters are present.
      */
-    public function testNoFilters()
+    public function testNoFilters(): void
     {
         $this->Controller->Components->trigger('initialize', array($this->Controller));
         $this->assertEmpty($this->Controller->Filter->settings);
-        $this->assertFalse($this->Controller->Document->Behaviors->enabled('Filtered'));
+        $isBehaviorEnabled = $this->Controller->Document->Behaviors->enabled('Filtered');
+        $this->assertInternalType('bool', $isBehaviorEnabled);
+        if (is_bool($isBehaviorEnabled)) {
+            $this->assertFalse($isBehaviorEnabled);
+        }
 
         $this->Controller->Components->trigger('startup', array($this->Controller));
         $this->assertFalse(in_array('Filter.Filter', $this->Controller->helpers));
@@ -81,7 +91,7 @@ class FilterComponentTest extends CakeTestCase
      * Test bailing out when a filter model can't be found
      * or when the current action has no filters.
      */
-    public function testNoModelPresentOrNoActionFilters()
+    public function testNoModelPresentOrNoActionFilters(): void
     {
         $testSettings = array(
             'index' => array(
@@ -106,7 +116,11 @@ class FilterComponentTest extends CakeTestCase
 
         $this->Controller->filters = $testSettings;
         $this->Controller->Components->trigger('initialize', array($this->Controller));
-        $this->assertFalse($this->Controller->Document->Behaviors->enabled('Filtered'));
+        $isBehaviorEnabled = $this->Controller->Document->Behaviors->enabled('Filtered');
+        $this->assertInternalType('bool', $isBehaviorEnabled);
+        if (is_bool($isBehaviorEnabled)) {
+            $this->assertFalse($isBehaviorEnabled);
+        }
 
         $testSettings = array(
             'index' => array(
@@ -118,13 +132,17 @@ class FilterComponentTest extends CakeTestCase
 
         $this->Controller->filters = $testSettings;
         $this->Controller->Components->trigger('initialize', array($this->Controller));
-        $this->assertTrue($this->Controller->Document->Behaviors->enabled('Filtered'));
+        $isBehaviorEnabled = $this->Controller->Document->Behaviors->enabled('Filtered');
+        $this->assertInternalType('bool', $isBehaviorEnabled);
+        if (is_bool($isBehaviorEnabled)) {
+            $this->assertTrue($isBehaviorEnabled);
+        }
     }
 
     /**
      * Test basic filter settings.
      */
-    public function testBasicFilters()
+    public function testBasicFilters(): void
     {
         $testSettings = array(
             'index' => array(
@@ -146,7 +164,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test running a component with no filter data.
      */
-    public function testEmptyStartup()
+    public function testEmptyStartup(): void
     {
         $testSettings = array(
             'index' => array(
@@ -165,7 +183,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test loading filter data from session (both full and empty).
      */
-    public function testSessionStartupData()
+    public function testSessionStartupData(): void
     {
         $testSettings = array(
             'index' => array(
@@ -210,7 +228,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test loading filter data from a post request.
      */
-    public function testPostStartupData()
+    public function testPostStartupData(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'POST';
 
@@ -244,7 +262,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test exiting beforeRender when in an action with no settings.
      */
-    public function testBeforeRenderAbort()
+    public function testBeforeRenderAbort(): void
     {
         $testSettings = array(
             'veryMuchNotIndex' => array(
@@ -266,7 +284,7 @@ class FilterComponentTest extends CakeTestCase
      * Test triggering an error when the plugin runs into a setting
      * for filtering a model which cannot be found.
      */
-    public function testNoModelFound()
+    public function testNoModelFound(): void
     {
         $testSettings = array(
             'index' => array(
@@ -291,7 +309,7 @@ class FilterComponentTest extends CakeTestCase
      * Test the view variable generation for very basic filtering.
      * Also tests model name detection and custom label.
      */
-    public function testBasicViewInfo()
+    public function testBasicViewInfo(): void
     {
         $testSettings = array(
             'index' => array(
@@ -333,7 +351,7 @@ class FilterComponentTest extends CakeTestCase
      * Test passing additional inputOptions to the form
      * helper, used to customize search form.
      */
-    public function testAdditionalInputOptions()
+    public function testAdditionalInputOptions(): void
     {
         $testSettings = array(
             'index' => array(
@@ -386,7 +404,7 @@ class FilterComponentTest extends CakeTestCase
      * Test data fetching for select input when custom selector
      * and custom options are provided.
      */
-    public function testCustomSelector()
+    public function testCustomSelector(): void
     {
         $testSettings = array(
             'index' => array(
@@ -427,7 +445,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test checkbox input filtering.
      */
-    public function testCheckboxOptions()
+    public function testCheckboxOptions(): void
     {
         $testSettings = array(
             'index' => array(
@@ -463,7 +481,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test basic filter settings.
      */
-    public function testSelectMultiple()
+    public function testSelectMultiple(): void
     {
         $testSettings = array(
             'index' => array(
@@ -488,7 +506,7 @@ class FilterComponentTest extends CakeTestCase
     /**
      * Test select input for the model filtered.
      */
-    public function testSelectInputFromSameModel()
+    public function testSelectInputFromSameModel(): void
     {
         $testSettings = array(
             'index' => array(
@@ -530,7 +548,7 @@ class FilterComponentTest extends CakeTestCase
      * Test disabling persistence for single action
      * and for the entire controller.
      */
-    public function testPersistence()
+    public function testPersistence(): void
     {
         $testSettings = array(
             'index' => array(
@@ -564,7 +582,7 @@ class FilterComponentTest extends CakeTestCase
      * Test whether filtering by belongsTo model text field
      * works correctly.
      */
-    public function testBelongsToFilteringByText()
+    public function testBelongsToFilteringByText(): void
     {
         $testSettings = array(
             'index' => array(

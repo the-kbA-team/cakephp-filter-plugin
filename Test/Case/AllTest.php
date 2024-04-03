@@ -14,7 +14,7 @@ App::uses('CakePlugin', 'Core');
 
 class AllFilterTests extends CakeTestSuite
 {
-    public static function suite()
+    public static function suite(): CakeTestSuite
     {
         $suite = new CakeTestSuite('All FilterPlugin tests');
 

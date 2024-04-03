@@ -13,8 +13,14 @@
 
 class MetadataFixture extends CakeTestFixture
 {
+    /**
+     * @var string
+     */
     public $name = 'Metadata';
 
+    /**
+     * @var array<string, array<string, string|int|bool>>
+     */
     public $fields = array(
         'id' => array('type' => 'integer', 'key' => 'primary'),
         'document_id' => array('type' => 'integer', 'null' => false),
@@ -23,6 +29,9 @@ class MetadataFixture extends CakeTestFixture
         'permissions' => array('type' => 'string', 'length' => 10, 'null' => false),
     );
 
+    /**
+     * @var array<int, array<string, int|string>>
+     */
     public $records = array(
         array('id' => 1, 'document_id' => 1, 'weight' => 5, 'size' => 256, 'permissions' => 'rw-r--r--'),
         array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),

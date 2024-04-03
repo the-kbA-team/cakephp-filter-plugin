@@ -14,14 +14,27 @@ App::uses('AppHelper', 'View/Helper');
 
 class FilterHelper extends AppHelper
 {
+    /**
+     * @var View
+     */
     protected $_view = null;
 
-    public function __construct(View $view, $settings = array())
+    /**
+     * @param View $view
+     * @param array<mixed> $settings
+     */
+    public function __construct(View $view, array $settings = array())
     {
+        parent::__construct($view, $settings);
         $this->_view = $view;
     }
 
-    public function filterForm($modelName, $options)
+    /**
+     * @param string $modelName
+     * @param array<mixed> $options
+     * @return string
+     */
+    public function filterForm(string $modelName, array $options): string
     {
         $view =& $this->_view;
 
@@ -50,7 +63,12 @@ class FilterHelper extends AppHelper
         return $output;
     }
 
-    public function beginForm($modelName, $options)
+    /**
+     * @param string $modelName
+     * @param array<mixed> $options
+     * @return string
+     */
+    public function beginForm(string $modelName, array $options): string
     {
         $view =& $this->_view;
         $output = $view->element(
@@ -66,7 +84,11 @@ class FilterHelper extends AppHelper
         return $output;
     }
 
-    public function inputFields($fields = array())
+    /**
+     * @param array<mixed> $fields
+     * @return string
+     */
+    public function inputFields(array $fields = array()): string
     {
         $view =& $this->_view;
         $output = $view->element(
@@ -81,7 +103,7 @@ class FilterHelper extends AppHelper
         return $output;
     }
 
-    public function endForm()
+    public function endForm(): string
     {
         $view = $this->_view;
         $output = $view->element(
