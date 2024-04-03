@@ -28,5 +28,6 @@ class DocumentTestsController extends Controller
      */
     public function redirect($url, $status = null, $exit = true)
     {
+        return $this->response;
     }
 }
