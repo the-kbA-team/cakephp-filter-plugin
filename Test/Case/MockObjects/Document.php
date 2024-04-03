@@ -22,7 +22,7 @@ class Document extends CakeTestModel
     public $hasMany = array('Item');
 
     /**
-     * @var array<int|string, array<string, mixed>>
+     * @var array<int|string, mixed>
      */
     public $hasOne = array('Metadata');
 }
