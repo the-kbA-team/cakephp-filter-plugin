@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @mixin FilteredBehavior
+ * @property DocumentCategory $DocumentCategory
+ */
 class Document3 extends CakeTestModel
 {
     /**
