@@ -28,8 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Check PHP syntax of config/phinx.php
-        run: php -l src/ tests/
+      - name: Check PHP syntax
+        run: php -l Controller/ Model/ Test/ View/
 
   # phpstan for several php versions
   phpstan:
