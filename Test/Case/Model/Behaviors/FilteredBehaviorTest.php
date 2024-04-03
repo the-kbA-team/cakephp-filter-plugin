@@ -34,7 +34,7 @@ class FilteredBehaviorTest extends CakeTestCase
     );
 
     /**
-     * @var Document
+     * @var Document|Document2|Document3
      */
     public $Document;
 
@@ -667,10 +667,10 @@ class FilteredBehaviorTest extends CakeTestCase
     public function testAfterDataFilterCallbackQueryChange(): void
     {
         $document = ClassRegistry::init('Document3');
-        if ($document instanceof Document) {
+        if ($document instanceof Document3) {
             $this->Document = $document;
         } else {
-            throw new Exception('Can not create Document model');
+            throw new Exception('Can not create Document3 model');
         }
         $this->Document->itemToUnset = 'FilterDocumentCategory.id';
 
