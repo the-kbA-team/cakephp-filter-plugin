@@ -628,10 +628,17 @@ class FilteredBehaviorTest extends CakeTestCase
 
     /**
      * Test beforeDataFilter() callback, used to cancel filtering if necessary.
+     *
+     * @throws Exception
      */
     public function testBeforeDataFilterCallbackCancel(): void
     {
-        $this->Document = ClassRegistry::init('Document2');
+        $document2 = ClassRegistry::init('Document2');
+        if ($document2 instanceof Document2) {
+            $this->Document = $document2;
+        } else {
+            throw new Exception('Can not create Document2 model');
+        }
 
         $testOptions = array(
             'Document.title' => array('type' => 'text', 'condition' => 'like'),
