@@ -18,12 +18,9 @@ not the latest version from GitHub.
 
 First, obtain the plugin. If you're using Git, run this while in your app folder:
 
-	git submodule add git://github.com/lecterror/cakephp-filter-plugin.git Plugin/Filter
-	git submodule init
-	git submodule update
-
-Or visit <http://github.com/lecterror/cakephp-filter-plugin> and download the
-plugin manually to your `app/Plugin/Filter/` folder.
+```shell
+composer require kba-team/cakephp-filter-plugin
+```
 
 To use the plugin, you need to tell it which model to filter and which fields to use. For
 a quick tutorial, visit <https://github.com/lecterror/cakephp-filter-plugin/wiki/Basic-usage>
@@ -45,27 +42,31 @@ docker run \
     devkba/cake2-app-template:staging /cakephp-filter-plugin/Test/test.sh
 ```
 
-## Contributing ##
+## Contributing
 
 If you'd like to contribute, clone the source on GitHub, make your changes and send me a pull request.
-If you don't know how to fix the issue or you're too lazy to do it, create a ticket and we'll see
+If you don't know how to fix the issue, or you're too lazy to do it, create a ticket, and we'll see
 what happens next.
 
 **Important**: If you're sending a patch, follow the coding style! If you don't, there is a great
 chance I won't accept it. For example:
 
-	// bad
-	public function drink() {
-		return false;
-	}
+```php
+// bad
+public function drink() {
+    return false;
+}
+```
 
-	// good
-	public function drink()
-	{
-		return true;
-	}
+```php
+// good
+public function drink()
+{
+    return true;
+}
+```
 
-## Licence ##
+## Licence
 
 Multi-licensed under:
 
