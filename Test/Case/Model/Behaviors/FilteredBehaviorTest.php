@@ -20,7 +20,7 @@ App::uses('DocumentTestsController', 'Filter.Test/Case/MockObjects');
 App::uses('Item', 'Filter.Test/Case/MockObjects');
 App::uses('Metadata', 'Filter.Test/Case/MockObjects');
 
-class FilteredBehaviorTest extends CakeTestCase
+class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var string[]
@@ -39,12 +39,12 @@ class FilteredBehaviorTest extends CakeTestCase
     public $Document;
 
     /**
-     * @param $model
      * @return void
      * @throws Exception
      */
-    public function startTest($model)
+    public function setUp(): void
     {
+        parent::setUp();
         $Document = ClassRegistry::init('Document');
 
         if ($Document instanceof Document) {
@@ -52,11 +52,6 @@ class FilteredBehaviorTest extends CakeTestCase
         } else {
             throw new Exception('Can not create Document model');
         }
-    }
-
-    public function endTest($model)
-    {
-        unset($this->Document);
     }
 
     /**
