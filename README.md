@@ -36,6 +36,7 @@ In order to generate GET forms add `'type' => 'GET'` to the `filterForm()` or `b
 ## Testing
 
 ```shell
+docker pull devkba/cake2-app-template:staging;
 docker run \
     --rm \
     -it \
