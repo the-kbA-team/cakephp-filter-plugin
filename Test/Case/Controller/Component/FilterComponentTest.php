@@ -11,6 +11,8 @@
  * GPL <http://www.gnu.org/licenses/gpl.html>
  */
 
+use PHPUnit\Framework\TestCase;
+
 App::uses('Router', 'Routing');
 App::uses('Component', 'Filter.Filter');
 App::uses('Document', 'Filter.Test/Case/MockObjects');
@@ -21,7 +23,7 @@ App::uses('DocumentTestsController', 'Filter.Test/Case/MockObjects');
 App::uses('Item', 'Filter.Test/Case/MockObjects');
 App::uses('Metadata', 'Filter.Test/Case/MockObjects');
 
-class FilterComponentTest extends CakeTestCase
+class FilterComponentTest extends TestCase
 {
     /**
      * @var string[]
@@ -39,8 +41,10 @@ class FilterComponentTest extends CakeTestCase
      */
     public $Controller;
 
-    public function startTest($method)
+    public function setUp(): void
     {
+        parent::setUp();
+
         Router::connect('/', array('controller' => 'document_tests', 'action' => 'index'));
         $request = new CakeRequest('/');
         $request->addParams(Router::parse('/'));
