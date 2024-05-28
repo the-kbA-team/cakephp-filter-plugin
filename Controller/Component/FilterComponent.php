@@ -78,7 +78,7 @@ class FilterComponent extends Component
             if (!isset($controller->{$model})) {
                 $errMsg = __('Filter model not found: %s', $model);
                 if (is_string($errMsg)) {
-                    trigger_error($errMsg);
+                    throw new InvalidArgumentException($errMsg);
                 }
                 continue;
             }
@@ -130,7 +130,7 @@ class FilterComponent extends Component
             if (!isset($controller->{$model})) {
                 $errMsg = __('Filter model not found: %s', $model);
                 if (is_string($errMsg)) {
-                    trigger_error($errMsg);
+                    throw new InvalidArgumentException($errMsg);
                 }
                 continue;
             }
