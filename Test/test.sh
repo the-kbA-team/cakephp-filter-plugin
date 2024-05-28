@@ -12,7 +12,7 @@ composer require --prefer-source kba-team/cakephp-filter-plugin:@dev
 # Either use the test case from the parameter, or run all tests
 if [ -n "${1}" ]; then
     # call PHPUnit and remember return code
-    vendor/bin/phpunit "Plugin/Filter/${1}"
+    vendor/bin/phpunit ${*}
     E=$?
 else
     (>&2 echo "ERROR: Missing test case!")

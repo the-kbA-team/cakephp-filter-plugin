@@ -11,8 +11,6 @@
  * GPL <http://www.gnu.org/licenses/gpl.html>
  */
 
-use PHPUnit\Framework\TestCase;
-
 App::uses('Router', 'Routing');
 App::uses('Component', 'Filter.Filter');
 App::uses('Document', 'Filter.Test/Case/MockObjects');
@@ -23,7 +21,7 @@ App::uses('DocumentTestsController', 'Filter.Test/Case/MockObjects');
 App::uses('Item', 'Filter.Test/Case/MockObjects');
 App::uses('Metadata', 'Filter.Test/Case/MockObjects');
 
-class FilterComponentTest extends TestCase
+class FilterComponentTest extends CakeTestCase
 {
     /**
      * @var string[]
@@ -82,7 +80,7 @@ class FilterComponentTest extends TestCase
         $this->Controller->Components->trigger('initialize', array($this->Controller));
         $this->assertEmpty($this->Controller->Filter->settings);
         $isBehaviorEnabled = $this->Controller->Document->Behaviors->enabled('Filtered');
-        $this->assertInternalType('bool', $isBehaviorEnabled);
+        $this->assertIsBool($isBehaviorEnabled);
         if (is_bool($isBehaviorEnabled)) {
             $this->assertFalse($isBehaviorEnabled);
         }
@@ -105,7 +103,9 @@ class FilterComponentTest extends TestCase
             )
         );
 
-        $this->setExpectedException('PHPUnit_Framework_Error_Notice');
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Filter model not found: DocumentArse');
+
         $this->Controller->filters = $testSettings;
         $this->Controller->Components->trigger('initialize', array($this->Controller));
 
@@ -117,11 +117,10 @@ class FilterComponentTest extends TestCase
             )
         );
 
-
         $this->Controller->filters = $testSettings;
         $this->Controller->Components->trigger('initialize', array($this->Controller));
         $isBehaviorEnabled = $this->Controller->Document->Behaviors->enabled('Filtered');
-        $this->assertInternalType('bool', $isBehaviorEnabled);
+        $this->assertIsBool($isBehaviorEnabled);
         if (is_bool($isBehaviorEnabled)) {
             $this->assertFalse($isBehaviorEnabled);
         }
@@ -137,7 +136,7 @@ class FilterComponentTest extends TestCase
         $this->Controller->filters = $testSettings;
         $this->Controller->Components->trigger('initialize', array($this->Controller));
         $isBehaviorEnabled = $this->Controller->Document->Behaviors->enabled('Filtered');
-        $this->assertInternalType('bool', $isBehaviorEnabled);
+        $this->assertIsBool($isBehaviorEnabled);
         if (is_bool($isBehaviorEnabled)) {
             $this->assertTrue($isBehaviorEnabled);
         }
@@ -205,11 +204,19 @@ class FilterComponentTest extends TestCase
 
         $filterValues = array();
         $this->Controller->Session->write($sessionKey, $filterValues);
-        $this->setExpectedException('PHPUnit_Framework_Error_Notice');
-        $this->Controller->Components->trigger('initialize', array($this->Controller));
+        try {
+            $this->Controller->Components->trigger('initialize', array($this->Controller));
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e1) {
+            $this->assertSame('Filter model not found: FakeNonexistant', $e1->getMessage());
+        }
 
-        $this->setExpectedException('PHPUnit_Framework_Error_Notice');
-        $this->Controller->Components->trigger('startup', array($this->Controller));
+        try {
+            $this->Controller->Components->trigger('startup', array($this->Controller));
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e2) {
+            $this->assertSame('xxxFilter model not found: FakeNonexistant', $e2->getMessage());
+        }
         $actualFilterValues = $this->Controller->Document->getFilterValues();
         $this->assertEquals(
             $filterValues,
