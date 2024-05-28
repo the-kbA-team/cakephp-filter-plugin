@@ -34,7 +34,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     );
 
     /**
-     * @var Document|Document2|Document3
+     * @var AppModel|Document|Document2|Document3
      */
     public $Document;
 
@@ -47,9 +47,10 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
         parent::setUp();
         $Document = ClassRegistry::init('Document');
 
-        if ($Document instanceof Document) {
+        if ($Document instanceof AppModel) {
             $this->Document = $Document;
         } else {
+            var_dump(get_class($Document));
             throw new Exception('Can not create Document model');
         }
     }
@@ -72,7 +73,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     {
         $this->Document->Behaviors->attach('Filter.Filtered');
         $isBehaviorAttached = $this->Document->Behaviors->enabled('Filtered');
-        $this->assertInternalType('bool', $isBehaviorAttached);
+        $this->assertIsBool($isBehaviorAttached);
         if (is_bool($isBehaviorAttached)) {
             $this->assertTrue($isBehaviorAttached);
         }
@@ -153,7 +154,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
         );
         $this->Document->setFilterValues($filterValues);
 
-        $this->setExpectedException('PHPUnit_Framework_Error_Notice');
+        $this->expectException('PHPUnit_Framework_Error_Notice');
         $this->Document->find('first');
     }
 
@@ -629,7 +630,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     public function testBeforeDataFilterCallbackCancel(): void
     {
         $document2 = ClassRegistry::init('Document2');
-        if ($document2 instanceof Document2) {
+        if ($document2 instanceof AppModel) {
             $this->Document = $document2;
         } else {
             throw new Exception('Can not create Document2 model');
@@ -669,7 +670,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     public function testAfterDataFilterCallbackQueryChange(): void
     {
         $document = ClassRegistry::init('Document3');
-        if ($document instanceof Document3) {
+        if ($document instanceof AppModel) {
             $this->Document = $document;
         } else {
             throw new Exception('Can not create Document3 model');
