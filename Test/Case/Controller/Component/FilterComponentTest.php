@@ -301,14 +301,30 @@ class FilterComponentTest extends CakeTestCase
         );
         $this->Controller->filters = $testSettings;
 
-        $this->setExpectedException('PHPUnit_Framework_Error_Notice');
-        $this->Controller->Components->trigger('initialize', array($this->Controller));
+        try {
+            $this->Controller->Components->trigger('initialize', array($this->Controller));
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame('Filter model not found: ThisModelDoesNotExist', $e->getMessage());
+        }
 
-        //$this->expectError();
-        $this->Controller->Components->trigger('startup', array($this->Controller));
+        $sessionKey = sprintf('FilterPlugin.Filters.%s.%s', $this->Controller->name, $this->Controller->action);
+        $filterValues = array('ThisModelDoesNotExist' => array('title' => 'in'));
+        $this->Controller->Session->write($sessionKey, $filterValues);
+        try {
+            $this->Controller->Components->trigger('startup', array($this->Controller));
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame('Filter model not found: ThisModelDoesNotExist', $e->getMessage());
+        }
+        $this->Controller->Session->delete($sessionKey);
 
-        $this->setExpectedException('PHPUnit_Framework_Error_Notice');
-        $this->Controller->Components->trigger('beforeRender', array($this->Controller));
+        try {
+            $this->Controller->Components->trigger('beforeRender', array($this->Controller));
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame('Filter model not found: ThisModelDoesNotExist', $e->getMessage());
+        }
     }
 
     /**
