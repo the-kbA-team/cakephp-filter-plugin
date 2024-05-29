@@ -32,14 +32,25 @@ In order to generate GET forms add `'type' => 'GET'` to the `filterForm()` or `b
 
 ## Testing
 
+To run PHPUnit tests:
+
 ```shell
-docker pull devkba/cake2-app-template:staging;
+Test/phpunit.sh <args>
+```
+
+Execute shell for manual testing
+
+```shell
+docker pull devkba/cake2-app-template:staging
 docker run \
     --rm \
+    --init \
     -it \
     -v "$(pwd)":/cakephp-filter-plugin \
     -e DEBUG=0 \
-    devkba/cake2-app-template:staging /cakephp-filter-plugin/Test/test.sh
+    -e BEFORE_SCRIPT="/cakephp-filter-plugin/Test/before_script.sh" \
+    -e AFTER_SCRIPT="/cakephp-filter-plugin/Test/after_script.sh" \
+    devkba/cake2-app-template:staging
 ```
 
 ## Contributing

@@ -9,15 +9,3 @@ composer config repositories.cakephp-filter-plugin '{"type": "path", "url": "/ca
 composer config repo.packagist false
 # require the current dev version of the filter plugin
 composer require --prefer-source kba-team/cakephp-filter-plugin:@dev
-# Either use the test case from the parameter, or run all tests
-if [ -n "${1}" ]; then
-    # call PHPUnit and remember return code
-    vendor/bin/phpunit ${*}
-    E=$?
-else
-    (>&2 echo "ERROR: Missing test case!")
-fi
-# stop mysql service at the end of the tests
-service mysql stop
-# exit with the return code of phpunit
-exit $E
