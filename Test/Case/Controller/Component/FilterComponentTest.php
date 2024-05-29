@@ -66,8 +66,10 @@ class FilterComponentTest extends CakeTestCase
         $this->Controller->Components->trigger('initialize', array($this->Controller));
     }
 
-    public function endTest($method)
+    public function tearDown(): void
     {
+        parent::tearDown();
+
         $this->Controller->Session->destroy();
         unset($this->Controller);
     }
@@ -211,22 +213,15 @@ class FilterComponentTest extends CakeTestCase
             $this->assertSame('Filter model not found: FakeNonexistant', $e1->getMessage());
         }
 
+        $filterValues = array('Document' => array('title' => 'in'));
+        $this->Controller->Session->write($sessionKey, $filterValues);
+
         try {
             $this->Controller->Components->trigger('startup', array($this->Controller));
             $this->fail('InvalidArgumentException was not thrown');
         } catch (InvalidArgumentException $e2) {
-            $this->assertSame('xxxFilter model not found: FakeNonexistant', $e2->getMessage());
+            $this->assertSame('Filter model not found: FakeNonexistant', $e2->getMessage());
         }
-        $actualFilterValues = $this->Controller->Document->getFilterValues();
-        $this->assertEquals(
-            $filterValues,
-            $actualFilterValues[$this->Controller->Document->alias]
-        );
-
-        $filterValues = array('Document' => array('title' => 'in'));
-        $this->Controller->Session->write($sessionKey, $filterValues);
-
-        $this->Controller->Components->trigger('startup', array($this->Controller));
         $actualFilterValues = $this->Controller->Document->getFilterValues();
         $this->assertEquals(
             $filterValues,
