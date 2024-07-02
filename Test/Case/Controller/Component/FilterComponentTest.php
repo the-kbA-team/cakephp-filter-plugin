@@ -49,17 +49,10 @@ class FilterComponentTest extends CakeTestCase
         $this->Controller = new DocumentTestsController($request);
         $this->Controller->uses = array('Document');
 
-        if (array_search($method, array('testPersistence')) !== false) {
-            $this->Controller->components = array(
-                'Session',
-                'Filter.Filter' => array('nopersist' => true)
-            );
-        } else {
-            $this->Controller->components = array(
-                'Session',
-                'Filter.Filter'
-            );
-        }
+        $this->Controller->components = array(
+            'Session',
+            'Filter.Filter'
+        );
 
         $this->Controller->constructClasses();
         $this->Controller->Session->destroy();
@@ -440,6 +433,16 @@ class FilterComponentTest extends CakeTestCase
                 )
             )
         );
+
+        /**
+         * For some reason the mock object DocumentCategory is not found by
+         * ClassRegistry::init('DocumentCategory');
+         * in
+         * FilterComponent.php:216
+         * This line adds the mock object as model class for DocumentCategory.
+         */
+        ClassRegistry::addObject('document_category', new DocumentCategory());
+
         $this->Controller->filters = $testSettings;
 
         $this->Controller->Components->trigger('initialize', array($this->Controller));
