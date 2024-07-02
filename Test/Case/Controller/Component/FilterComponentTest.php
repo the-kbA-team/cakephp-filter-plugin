@@ -439,8 +439,9 @@ class FilterComponentTest extends CakeTestCase
          * ClassRegistry::init('DocumentCategory');
          * in
          * FilterComponent.php:216
-         * This line adds the mock object as model class for DocumentCategory.
+         * The following two lines adds the mock object as model class for DocumentCategory.
          */
+        App::uses('DocumentCategory', 'Filter.Test/Case/MockObjects');
         ClassRegistry::addObject('document_category', new DocumentCategory());
 
         $this->Controller->filters = $testSettings;
