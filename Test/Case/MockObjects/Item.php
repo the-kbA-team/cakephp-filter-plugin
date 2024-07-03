@@ -2,6 +2,13 @@
 
 class Item extends CakeTestModel
 {
-	public $name = 'Item';
-	public $belongsTo = array('Document');
+    /**
+     * @var string
+     */
+    public $name = 'Item';
+
+    /**
+     * @var string[]
+     */
+    public $belongsTo = array('Document');
 }

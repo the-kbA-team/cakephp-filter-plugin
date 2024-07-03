@@ -1,9 +1,28 @@
 <?php
 
+/**
+ * @mixin FilteredBehavior
+ * @property DocumentCategory $DocumentCategory
+ */
 class Document extends CakeTestModel
 {
-	public $name = 'Document';
-	public $belongsTo = array('DocumentCategory');
-	public $hasMany = array('Item');
-	public $hasOne = array('Metadata');
+    /**
+     * @var string
+     */
+    public $name = 'Document';
+
+    /**
+     * @var string[]
+     */
+    public $belongsTo = array('DocumentCategory');
+
+    /**
+     * @var string[]
+     */
+    public $hasMany = array('Item');
+
+    /**
+     * @var array<int|string, mixed>
+     */
+    public $hasOne = array('Metadata');
 }

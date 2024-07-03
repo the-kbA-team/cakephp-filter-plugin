@@ -1,748 +1,709 @@
 <?php
 /**
-	CakePHP Filter Plugin
-
-	Copyright (C) 2009-3827 dr. Hannibal Lecter / lecterror
-	<http://lecterror.com/>
-
-	Multi-licensed under:
-		MPL <http://www.mozilla.org/MPL/MPL-1.1.html>
-		LGPL <http://www.gnu.org/licenses/lgpl.html>
-		GPL <http://www.gnu.org/licenses/gpl.html>
-*/
+ * CakePHP Filter Plugin
+ *
+ * Copyright (C) 2009-3827 dr. Hannibal Lecter / lecterror
+ * <http://lecterror.com/>
+ *
+ * Multi-licensed under:
+ * MPL <http://www.mozilla.org/MPL/MPL-1.1.html>
+ * LGPL <http://www.gnu.org/licenses/lgpl.html>
+ * GPL <http://www.gnu.org/licenses/gpl.html>
+ */
 
 App::import('Core', array('AppModel', 'Model'));
-App::uses('Document', 'Filter.Test/Case/MockObjects');
-App::uses('Document2', 'Filter.Test/Case/MockObjects');
-App::uses('Document3', 'Filter.Test/Case/MockObjects');
-App::uses('DocumentCategory', 'Filter.Test/Case/MockObjects');
 App::uses('DocumentTestsController', 'Filter.Test/Case/MockObjects');
-App::uses('Item', 'Filter.Test/Case/MockObjects');
-App::uses('Metadata', 'Filter.Test/Case/MockObjects');
+
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document2.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document3.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/DocumentCategory.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Item.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Metadata.php');
 
 class FilteredBehaviorTest extends CakeTestCase
 {
-	public $fixtures = array
-		(
-			'plugin.filter.document_category',
-			'plugin.filter.document',
-			'plugin.filter.item',
-			'plugin.filter.metadata',
-		);
-
-	public $Document = null;
-
-	public function startTest($model)
-	{
-		$this->Document = ClassRegistry::init('Document');
-	}
-
-	public function endTest($model)
-	{
-		$this->Document = null;
-	}
-
-	/**
-	 * Detach and re-attach the behavior to reset the options.
-	 *
-	 * @param array $options Behavior options.
-	 */
-	protected function _reattachBehavior($options = array())
-	{
-		$this->Document->Behaviors->detach('Filtered');
-		$this->Document->Behaviors->attach('Filter.Filtered', $options);
-	}
-
-	/**
-	 * Test attaching without options.
-	 */
-	public function testBlankAttaching()
-	{
-		$this->Document->Behaviors->attach('Filter.Filtered');
-		$this->assertTrue($this->Document->Behaviors->enabled('Filtered'));
-	}
-
-	/**
-	 * Test attaching with options.
-	 */
-	public function testInitSettings()
-	{
-		$testOptions = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like'),
-				'DocumentCategory.id'	=> array('type' => 'select', 'filterField' => 'document_category_id'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$expected = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like', 'required' => false, 'selectOptions' => array()),
-				'DocumentCategory.id'	=> array('type' => 'select', 'filterField' => 'document_category_id', 'condition' => 'like', 'required' => false, 'selectOptions' => array()),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?', 'condition' => 'like', 'required' => false, 'selectOptions' => array())
-			);
-		$this->assertEquals($expected, $this->Document->Behaviors->Filtered->settings[$this->Document->alias]);
-	}
-
-	/**
-	 * Test init settings when only a single field is given, with no extra options.
-	 */
-	public function testInitSettingsSingle()
-	{
-		$testOptions = array('Document.title');
-		$this->_reattachBehavior($testOptions);
-
-		$expected = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like', 'required' => false, 'selectOptions' => array()),
-			);
-		$this->assertEquals($expected, $this->Document->Behaviors->Filtered->settings[$this->Document->alias]);
-	}
-
-	/**
-	 * Test setting the filter values for future queries.
-	 */
-	public function testSetFilterValues()
-	{
-		$testOptions = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'DocumentCategory.id'	=> array('type' => 'select', 'filterField' => 'document_category_id'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?')
-			);
-
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in', 'is_private' => 0),
-				'DocumentCategory'	=> array('id' => 1)
-			);
-
-		$this->Document->setFilterValues($filterValues);
-		$actualFilterValues = $this->Document->getFilterValues();
-		$this->assertEquals($filterValues, $actualFilterValues[$this->Document->alias]);
-	}
-
-	/**
-	 * Test detecting an error in options - when a field is 'required' but no value is given for it.
-	 */
-	public function testLoadingRequiredFieldValueMissing()
-	{
-		$testOptions = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'DocumentCategory.id'	=> array('type' => 'select', 'filterField' => 'document_category_id'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('is_private' => 0),
-				'DocumentCategory'	=> array('id' => 1)
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$this->setExpectedException('PHPUnit_Framework_Error_Notice');
-		$this->Document->find('first');
-	}
-
-	/**
-	 * Test filtering with conditions from current model and belongsTo model.
-	 */
-	public function testFilteringBelongsTo()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'DocumentCategory.id'	=> array('type' => 'select')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in'),
-				'DocumentCategory'	=> array('id' => 1)
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
-				array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'))
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
-
-	public function testFilteringBelongsToTextField()
-	{
-		$testOptions = array
-			(
-				'DocumentCategory.title'	=> array('type' => 'text')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'DocumentCategory'	=> array('title' => 'spec')
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15'))
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test filtering with conditions from current model and belongsTo model,
-	 * same as testFilteringBelongsTo() except for a change in filterField format.
-	 */
-	public function testFilteringBelongsToFilterFieldTest()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'DocumentCategory.id'	=> array('type' => 'select', 'filterField' => 'Document.document_category_id')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in'),
-				'DocumentCategory'	=> array('id' => 1)
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
-				array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'))
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test various conditions for the type 'text' in filtering (less than, equal, like, etc..)
-	 */
-	public function testFilteringBelongsToDifferentConditions()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => '='),
-				'DocumentCategory.id'	=> array('type' => 'select')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'Illegal explosives DIY'),
-				'DocumentCategory'	=> array('id' => '')
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-
-		$testOptions = array
-			(
-				'id'					=> array('type' => 'text', 'condition' => '>='),
-				'created'				=> array('type' => 'text', 'condition' => '<=')
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('id' => 3, 'created' => '2010-03-01')
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
-				array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-				array('Document' => array('id' => 6, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-				array('Document' => array('id' => 7, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test filtering with conditions on current model, the belongsTo model
-	 * and hasMany model (behavior adds an INNER JOIN in query).
-	 */
-	public function testFilteringBelongsToAndHasMany()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'DocumentCategory.id'	=> array('type' => 'select'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?'),
-				'Item.code'				=> array('type' => 'text'),
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in', 'is_private' => 0),
-				'DocumentCategory'	=> array('id' => 1),
-				'Item'				=> array('code' => '04')
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-					'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
-					'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
-					'Item' => array
-						(
-							array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
-							array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
-							array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
-							array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
-						)
-				)
-			);
-
-		$result = $this->Document->find('all');
-		$this->assertEquals($expected, $result);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-					'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
-					'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
-				)
-			);
-
-		$result = $this->Document->find('all', array('recursive' => 0));
-		$this->assertEquals($expected, $result);
-
-		$this->Document->unbindModel(array('hasMany' => array('Item')), false);
-		$this->Document->bindModel(array('hasMany' => array('Item')), false);
-
-		$result = $this->Document->find('all', array('recursive' => 0));
-		$this->assertEquals($expected, $result);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44')
-				)
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test filtering with join which has some custom
-	 * condition in the relation (both string and array).
-	 */
-	public function testCustomJoinConditions()
-	{
-		$testOptions = array
-			(
-				'Metadata.weight'	=> array('type' => 'text', 'condition' => '>'),
-			);
-		$this->_reattachBehavior($testOptions);
-
-		$filterValues = array
-			(
-				'Metadata'			=> array('weight' => 3),
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15'),
-					'Metadata' => array('id' => 5, 'document_id' => 5, 'weight' => 4, 'size' => 790, 'permissions' => 'rw-rw-r--'),
-				)
-			);
-
-		$this->Document->recursive = -1;
-		$oldConditions = $this->Document->hasOne['Metadata']['conditions'];
-		$this->Document->hasOne['Metadata']['conditions'] = array('Metadata.size > 500');
-		$this->Document->Behaviors->attach('Containable');
-
-		$result = $this->Document->find('all', array('contain' => array('Metadata')));
-		$this->assertEquals($expected, $result);
-
-		$this->Document->hasOne['Metadata']['conditions'] = 'Metadata.size > 500';
-		$result = $this->Document->find('all', array('contain' => array('Metadata')));
-		$this->assertEquals($expected, $result);
-
-		$this->Document->hasOne['Metadata']['conditions'] = $oldConditions;
-		$this->Document->Behaviors->detach('Containable');
-	}
-
-	/**
-	 * Test for any possible conflicts with Containable behavior.
-	 */
-	public function testFilteringBelongsToAndHasManyWithContainable()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'DocumentCategory.id'	=> array('type' => 'select'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?'),
-				'Item.code'				=> array('type' => 'text'),
-			);
-
-		$this->_reattachBehavior($testOptions);
-		$this->Document->Behaviors->attach('Containable');
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in', 'is_private' => 0),
-				'DocumentCategory'	=> array('id' => 1),
-				'Item'				=> array('code' => '04')
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-					'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
-					'Item' => array
-						(
-							array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
-							array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
-							array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
-							array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
-						)
-				)
-			);
-
-		$result = $this->Document->find('all', array('contain' => array('DocumentCategory', 'Item')));
-		$this->assertEquals($expected, $result);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-					'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
-				)
-			);
-
-		$result = $this->Document->find('all', array('contain' => array('DocumentCategory')));
-		$this->assertEquals($expected, $result);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-				)
-			);
-
-		$result = $this->Document->find('all', array('contain' => array()));
-		$this->assertEquals($expected, $result);
-
-		$this->Document->Behaviors->detach('Containable');
-	}
-
-	/**
-	 * Test filtering by text input with hasOne relation.
-	 */
-	public function testHasOneAndHasManyWithTextSearch()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'Item.code'				=> array('type' => 'text'),
-				'Metadata.size'			=> array('type' => 'text', 'condition' => '='),
-			);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in'),
-				'Item'				=> array('code' => '04'),
-				'Metadata'			=> array('size' => 45),
-			);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec'),
-				)
-			);
-
-		$this->_reattachBehavior($testOptions);
-		$this->Document->setFilterValues($filterValues);
-
-		$this->Document->recursive = -1;
-		$result = $this->Document->find('all', array('fields' => array('Document.id', 'Document.title')));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test filtering with Containable and hasOne Model.field.
-	 */
-	public function testHasOneWithContainable()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'Item.code'				=> array('type' => 'text'),
-				'Metadata.size'			=> array('type' => 'text', 'condition' => '='),
-			);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in'),
-				'Item'				=> array('code' => '04'),
-				'Metadata'			=> array('size' => 45),
-			);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-					'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
-					'Item' => array
-						(
-							array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
-							array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
-							array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
-							array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
-						)
-				)
-			);
-
-		// containable first, filtered second
-		$this->Document->Behaviors->attach('Containable');
-		$this->_reattachBehavior($testOptions);
-		$this->Document->setFilterValues($filterValues);
-		$result = $this->Document->find('all', array('contain' => array('Metadata', 'Item')));
-		$this->assertEquals($expected, $result);
-		$this->Document->Behaviors->detach('Containable');
-
-		// filtered first, containable second
-		$this->_reattachBehavior($testOptions);
-		$this->Document->setFilterValues($filterValues);
-		$this->Document->Behaviors->attach('Containable');
-		$result = $this->Document->find('all', array('contain' => array('Metadata', 'Item')));
-		$this->assertEquals($expected, $result);
-		$this->Document->Behaviors->detach('Containable');
-	}
-
-	/**
-	 * Test filtering when a join is already present in the query,
-	 * this should prevent duplicate joins and query errors.
-	 */
-	public function testJoinAlreadyPresent()
-	{
-		$testOptions = array
-			(
-				'title'					=> array('type' => 'text', 'condition' => 'like', 'required' => true),
-				'Item.code'				=> array('type' => 'text'),
-				'Metadata.size'			=> array('type' => 'text', 'condition' => '='),
-			);
-
-		$filterValues = array
-			(
-				'Document'			=> array('title' => 'in'),
-				'Item'				=> array('code' => '04'),
-				'Metadata'			=> array('size' => 45),
-			);
-
-		$expected = array
-			(
-				array
-				(
-					'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
-					'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
-					'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
-					'Item' => array
-						(
-							array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
-							array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
-							array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
-							array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
-						)
-				)
-			);
-
-		$customJoin = array();
-		$customJoin[] = array
-			(
-				'table' => 'items',
-				'alias' => 'FilterItem',
-				'type' => 'INNER',
-				'conditions' => 'Document.id = FilterItem.document_id',
-			);
-
-		$this->_reattachBehavior($testOptions);
-		$this->Document->setFilterValues($filterValues);
-		$result = $this->Document->find('all', array('joins' => $customJoin, 'recursive' => 1));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test the 'nofilter' query param.
-	 */
-	public function testNofilterFindParam()
-	{
-		$testOptions = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like'),
-				'DocumentCategory.id'	=> array('type' => 'select'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?', 'default' => 0)
-			);
-		$this->_reattachBehavior($testOptions);
-
-
-		$filterValues = array
-			(
-				'DocumentCategory'	=> array('id' => 2),
-				'Document'			=> array('title' => '')
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15'))
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1, 'nofilter' => true));
-		$this->assertNotEquals($expected, $result);
-
-		$result = $this->Document->find('all', array('recursive' => -1, 'nofilter' => 'true'));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test bailing out if no settings exist for the current model.
-	 */
-	public function testExitWhenNoSettings()
-	{
-		$this->Document->DocumentCategory->Behaviors->attach('Filter.Filtered');
-
-		$this->assertFalse(isset($this->Document->DocumentCategory->Behaviors->Filtered->settings[$this->Document->DocumentCategory->alias]));
-
-		$filterValues = array
-			(
-				'DocumentCategory'	=> array('id' => 2)
-			);
-		$this->Document->DocumentCategory->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!')),
-				array('DocumentCategory' => array('id' => 2, 'title' => 'Imaginary Spec', 'description' => 'This doc does not exist')),
-				array('DocumentCategory' => array('id' => 3, 'title' => 'Nonexistant data', 'description' => 'This doc is probably empty')),
-				array('DocumentCategory' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'description' => 'Viva la revolucion!')),
-				array('DocumentCategory' => array('id' => 5, 'title' => 'Father Ted', 'description' => 'Feck! Drink! Arse! Girls!'))
-			);
-
-		$result = $this->Document->DocumentCategory->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-
-		$this->Document->DocumentCategory->Behaviors->detach('Filtered');
-	}
-
-	/**
-	 * Test beforeDataFilter() callback, used to cancel filtering if necessary.
-	 */
-	public function testBeforeDataFilterCallbackCancel()
-	{
-		$this->Document = ClassRegistry::init('Document2');
-
-		$testOptions = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like'),
-				'DocumentCategory.id'	=> array('type' => 'select'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?')
-			);
-		$this->_reattachBehavior($testOptions);
-
-
-		$filterValues = array
-			(
-				'DocumentCategory'	=> array('id' => 2)
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
-				array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44')),
-				array('Document' => array('id' => 3, 'title' => 'Nonexistant data', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-04-28 11:12:33', 'updated' => '2010-05-05 15:03:24')),
-				array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
-				array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-				array('Document' => array('id' => 6, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-				array('Document' => array('id' => 7, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
-
-	/**
-	 * Test afterDataFilter() callback, used to modify the conditions after
-	 * filter conditions have been applied.
-	 */
-	public function testAfterDataFilterCallbackQueryChange()
-	{
-		$this->Document = ClassRegistry::init('Document3');
-		$this->Document->itemToUnset = 'FilterDocumentCategory.id';
-
-		$testOptions = array
-			(
-				'Document.title'		=> array('type' => 'text', 'condition' => 'like'),
-				'DocumentCategory.id'	=> array('type' => 'select'),
-				'Document.is_private'	=> array('type' => 'checkbox', 'label' => 'Private?')
-			);
-		$this->_reattachBehavior($testOptions);
-
-
-		$filterValues = array
-			(
-				'DocumentCategory'	=> array('id' => 2)
-			);
-		$this->Document->setFilterValues($filterValues);
-
-		$expected = array
-			(
-				array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
-				array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44')),
-				array('Document' => array('id' => 3, 'title' => 'Nonexistant data', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-04-28 11:12:33', 'updated' => '2010-05-05 15:03:24')),
-				array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
-				array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-				array('Document' => array('id' => 6, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-				array('Document' => array('id' => 7, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
-			);
-
-		$result = $this->Document->find('all', array('recursive' => -1));
-		$this->assertEquals($expected, $result);
-	}
+    /**
+     * @var string[]
+     */
+    public $fixtures = array
+    (
+        'plugin.filter.document_category',
+        'plugin.filter.document',
+        'plugin.filter.item',
+        'plugin.filter.metadata',
+    );
+
+    /**
+     * @var Model|Document|Document2|Document3
+     */
+    public $Document;
+
+    /**
+     * @return void
+     * @throws Exception
+     */
+    public function setUp(): void
+    {
+        parent::setUp();
+        $Document = ClassRegistry::init('Document');
+
+        if ($Document instanceof Model) {
+            $this->Document = $Document;
+        } else {
+            throw new Exception('Can not create Document model');
+        }
+    }
+
+    /**
+     * Detach and re-attach the behavior to reset the options.
+     *
+     * @param array<mixed> $options Behavior options.
+     */
+    protected function _reattachBehavior(array $options = array()): void
+    {
+        $this->Document->Behaviors->detach('Filtered');
+        $this->Document->Behaviors->attach('Filter.Filtered', $options);
+    }
+
+    /**
+     * Test attaching without options.
+     */
+    public function testBlankAttaching(): void
+    {
+        $this->Document->Behaviors->attach('Filter.Filtered');
+        $isBehaviorAttached = $this->Document->Behaviors->enabled('Filtered');
+        $this->assertIsBool($isBehaviorAttached);
+        if (is_bool($isBehaviorAttached)) {
+            $this->assertTrue($isBehaviorAttached);
+        }
+    }
+
+    /**
+     * Test attaching with options.
+     */
+    public function testInitSettings(): void
+    {
+        $testOptions = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like'),
+            'DocumentCategory.id' => array('type' => 'select', 'filterField' => 'document_category_id'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $expected = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like', 'required' => false, 'selectOptions' => array()),
+            'DocumentCategory.id' => array('type' => 'select', 'filterField' => 'document_category_id', 'condition' => 'like', 'required' => false, 'selectOptions' => array()),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?', 'condition' => 'like', 'required' => false, 'selectOptions' => array())
+        );
+        $this->assertEquals($expected, $this->Document->Behaviors->Filtered->settings[$this->Document->alias]);
+    }
+
+    /**
+     * Test init settings when only a single field is given, with no extra options.
+     */
+    public function testInitSettingsSingle(): void
+    {
+        $testOptions = array('Document.title');
+        $this->_reattachBehavior($testOptions);
+
+        $expected = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like', 'required' => false, 'selectOptions' => array()),
+        );
+        $this->assertEquals($expected, $this->Document->Behaviors->Filtered->settings[$this->Document->alias]);
+    }
+
+    /**
+     * Test setting the filter values for future queries.
+     */
+    public function testSetFilterValues(): void
+    {
+        $testOptions = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'DocumentCategory.id' => array('type' => 'select', 'filterField' => 'document_category_id'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?')
+        );
+
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('title' => 'in', 'is_private' => 0),
+            'DocumentCategory' => array('id' => 1)
+        );
+
+        $this->Document->setFilterValues($filterValues);
+        $actualFilterValues = $this->Document->getFilterValues();
+        $this->assertEquals($filterValues, $actualFilterValues[$this->Document->alias]);
+    }
+
+    /**
+     * Test detecting an error in options - when a field is 'required' but no value is given for it.
+     */
+    public function testLoadingRequiredFieldValueMissing(): void
+    {
+        $testOptions = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'DocumentCategory.id' => array('type' => 'select', 'filterField' => 'document_category_id'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('is_private' => 0),
+            'DocumentCategory' => array('id' => 1)
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        try {
+            $this->Document->find('first');
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame('No value present for required field Document.title and default value not present', $e->getMessage());
+        }
+    }
+
+    /**
+     * Test filtering with conditions from current model and belongsTo model.
+     */
+    public function testFilteringBelongsTo(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'DocumentCategory.id' => array('type' => 'select')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('title' => 'in'),
+            'DocumentCategory' => array('id' => 1)
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
+            array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'))
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testFilteringBelongsToTextField(): void
+    {
+        $testOptions = array(
+            'DocumentCategory.title' => array('type' => 'text')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'DocumentCategory' => array('title' => 'spec')
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15'))
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test filtering with conditions from current model and belongsTo model,
+     * same as testFilteringBelongsTo() except for a change in filterField format.
+     */
+    public function testFilteringBelongsToFilterFieldTest(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'DocumentCategory.id' => array('type' => 'select', 'filterField' => 'Document.document_category_id')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('title' => 'in'),
+            'DocumentCategory' => array('id' => 1)
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
+            array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'))
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test various conditions for the type 'text' in filtering (less than, equal, like, etc..)
+     */
+    public function testFilteringBelongsToDifferentConditions(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => '='),
+            'DocumentCategory.id' => array('type' => 'select')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('title' => 'Illegal explosives DIY'),
+            'DocumentCategory' => array('id' => '')
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+
+        $testOptions = array(
+            'id' => array('type' => 'text', 'condition' => '>='),
+            'created' => array('type' => 'text', 'condition' => '<=')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('id' => 3, 'created' => '2010-03-01')
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
+            array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+            array('Document' => array('id' => 6, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+            array('Document' => array('id' => 7, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test filtering with conditions on current model, the belongsTo model
+     * and hasMany model (behavior adds an INNER JOIN in query).
+     */
+    public function testFilteringBelongsToAndHasMany(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'DocumentCategory.id' => array('type' => 'select'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?'),
+            'Item.code' => array('type' => 'text'),
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Document' => array('title' => 'in', 'is_private' => 0),
+            'DocumentCategory' => array('id' => 1),
+            'Item' => array('code' => '04')
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+                'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
+                'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
+                'Item' => array(
+                    array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
+                    array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
+                    array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
+                    array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
+                )
+            )
+        );
+
+        $result = $this->Document->find('all');
+        $this->assertEquals($expected, $result);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+                'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
+                'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
+            )
+        );
+
+        $result = $this->Document->find('all', array('recursive' => 0));
+        $this->assertEquals($expected, $result);
+
+        $this->Document->unbindModel(array('hasMany' => array('Item')), false);
+        $this->Document->bindModel(array('hasMany' => array('Item')), false);
+
+        $result = $this->Document->find('all', array('recursive' => 0));
+        $this->assertEquals($expected, $result);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44')
+            )
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test filtering with join which has some custom
+     * condition in the relation (both string and array).
+     */
+    public function testCustomJoinConditions(): void
+    {
+        $testOptions = array(
+            'Metadata.weight' => array('type' => 'text', 'condition' => '>'),
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'Metadata' => array('weight' => 3),
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15'),
+                'Metadata' => array('id' => 5, 'document_id' => 5, 'weight' => 4, 'size' => 790, 'permissions' => 'rw-rw-r--'),
+            )
+        );
+
+        $this->Document->recursive = -1;
+        $oldConditions = $this->Document->hasOne['Metadata']['conditions'];
+        $this->Document->hasOne['Metadata']['conditions'] = array('Metadata.size > 500');
+        $this->Document->Behaviors->attach('Containable');
+
+        $result = $this->Document->find('all', array('contain' => array('Metadata')));
+        $this->assertEquals($expected, $result);
+
+        $this->Document->hasOne['Metadata']['conditions'] = 'Metadata.size > 500';
+        $result = $this->Document->find('all', array('contain' => array('Metadata')));
+        $this->assertEquals($expected, $result);
+
+        $this->Document->hasOne['Metadata']['conditions'] = $oldConditions;
+        $this->Document->Behaviors->detach('Containable');
+    }
+
+    /**
+     * Test for any possible conflicts with Containable behavior.
+     */
+    public function testFilteringBelongsToAndHasManyWithContainable(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'DocumentCategory.id' => array('type' => 'select'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?'),
+            'Item.code' => array('type' => 'text'),
+        );
+
+        $this->_reattachBehavior($testOptions);
+        $this->Document->Behaviors->attach('Containable');
+
+        $filterValues = array(
+            'Document' => array('title' => 'in', 'is_private' => 0),
+            'DocumentCategory' => array('id' => 1),
+            'Item' => array('code' => '04')
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+                'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
+                'Item' => array(
+                    array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
+                    array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
+                    array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
+                    array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
+                )
+            )
+        );
+
+        $result = $this->Document->find('all', array('contain' => array('DocumentCategory', 'Item')));
+        $this->assertEquals($expected, $result);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+                'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
+            )
+        );
+
+        $result = $this->Document->find('all', array('contain' => array('DocumentCategory')));
+        $this->assertEquals($expected, $result);
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+            )
+        );
+
+        $result = $this->Document->find('all', array('contain' => array()));
+        $this->assertEquals($expected, $result);
+
+        $this->Document->Behaviors->detach('Containable');
+    }
+
+    /**
+     * Test filtering by text input with hasOne relation.
+     */
+    public function testHasOneAndHasManyWithTextSearch(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'Item.code' => array('type' => 'text'),
+            'Metadata.size' => array('type' => 'text', 'condition' => '='),
+        );
+
+        $filterValues = array(
+            'Document' => array('title' => 'in'),
+            'Item' => array('code' => '04'),
+            'Metadata' => array('size' => 45),
+        );
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec'),
+            )
+        );
+
+        $this->_reattachBehavior($testOptions);
+        $this->Document->setFilterValues($filterValues);
+
+        $this->Document->recursive = -1;
+        $result = $this->Document->find('all', array('fields' => array('Document.id', 'Document.title')));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test filtering with Containable and hasOne Model.field.
+     */
+    public function testHasOneWithContainable(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'Item.code' => array('type' => 'text'),
+            'Metadata.size' => array('type' => 'text', 'condition' => '='),
+        );
+
+        $filterValues = array(
+            'Document' => array('title' => 'in'),
+            'Item' => array('code' => '04'),
+            'Metadata' => array('size' => 45),
+        );
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+                'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
+                'Item' => array(
+                    array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
+                    array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
+                    array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
+                    array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
+                )
+            )
+        );
+
+        // containable first, filtered second
+        $this->Document->Behaviors->attach('Containable');
+        $this->_reattachBehavior($testOptions);
+        $this->Document->setFilterValues($filterValues);
+        $result = $this->Document->find('all', array('contain' => array('Metadata', 'Item')));
+        $this->assertEquals($expected, $result);
+        $this->Document->Behaviors->detach('Containable');
+
+        // filtered first, containable second
+        $this->_reattachBehavior($testOptions);
+        $this->Document->setFilterValues($filterValues);
+        $this->Document->Behaviors->attach('Containable');
+        $result = $this->Document->find('all', array('contain' => array('Metadata', 'Item')));
+        $this->assertEquals($expected, $result);
+        $this->Document->Behaviors->detach('Containable');
+    }
+
+    /**
+     * Test filtering when a join is already present in the query,
+     * this should prevent duplicate joins and query errors.
+     */
+    public function testJoinAlreadyPresent(): void
+    {
+        $testOptions = array(
+            'title' => array('type' => 'text', 'condition' => 'like', 'required' => true),
+            'Item.code' => array('type' => 'text'),
+            'Metadata.size' => array('type' => 'text', 'condition' => '='),
+        );
+
+        $filterValues = array(
+            'Document' => array('title' => 'in'),
+            'Item' => array('code' => '04'),
+            'Metadata' => array('size' => 45),
+        );
+
+        $expected = array(
+            array(
+                'Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44'),
+                'DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!'),
+                'Metadata' => array('id' => 2, 'document_id' => 2, 'weight' => 0, 'size' => 45, 'permissions' => 'rw-------'),
+                'Item' => array(
+                    array('id' => 4, 'document_id' => 2, 'code' => 'The item #01'),
+                    array('id' => 5, 'document_id' => 2, 'code' => 'The item #02'),
+                    array('id' => 6, 'document_id' => 2, 'code' => 'The item #03'),
+                    array('id' => 7, 'document_id' => 2, 'code' => 'The item #04')
+                )
+            )
+        );
+
+        $customJoin = array();
+        $customJoin[] = array(
+            'table' => 'items',
+            'alias' => 'FilterItem',
+            'type' => 'INNER',
+            'conditions' => 'Document.id = FilterItem.document_id',
+        );
+
+        $this->_reattachBehavior($testOptions);
+        $this->Document->setFilterValues($filterValues);
+        $result = $this->Document->find('all', array('joins' => $customJoin, 'recursive' => 1));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test the 'nofilter' query param.
+     */
+    public function testNofilterFindParam(): void
+    {
+        $testOptions = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like'),
+            'DocumentCategory.id' => array('type' => 'select'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?', 'default' => 0)
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'DocumentCategory' => array('id' => 2),
+            'Document' => array('title' => '')
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15'))
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1, 'nofilter' => true));
+        $this->assertNotEquals($expected, $result);
+
+        $result = $this->Document->find('all', array('recursive' => -1, 'nofilter' => 'true'));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test bailing out if no settings exist for the current model.
+     */
+    public function testExitWhenNoSettings(): void
+    {
+        $this->Document->DocumentCategory->Behaviors->attach('Filter.Filtered');
+
+        $this->assertFalse(isset($this->Document->DocumentCategory->Behaviors->Filtered->settings[$this->Document->DocumentCategory->alias]));
+
+        $filterValues = array(
+            'DocumentCategory' => array('id' => 2)
+        );
+        $this->Document->DocumentCategory->setFilterValues($filterValues);
+
+        $expected = array(
+            array('DocumentCategory' => array('id' => 1, 'title' => 'Testing Doc', 'description' => 'It\'s a bleeding test doc!')),
+            array('DocumentCategory' => array('id' => 2, 'title' => 'Imaginary Spec', 'description' => 'This doc does not exist')),
+            array('DocumentCategory' => array('id' => 3, 'title' => 'Nonexistant data', 'description' => 'This doc is probably empty')),
+            array('DocumentCategory' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'description' => 'Viva la revolucion!')),
+            array('DocumentCategory' => array('id' => 5, 'title' => 'Father Ted', 'description' => 'Feck! Drink! Arse! Girls!'))
+        );
+
+        $result = $this->Document->DocumentCategory->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+
+        $this->Document->DocumentCategory->Behaviors->detach('Filtered');
+    }
+
+    /**
+     * Test beforeDataFilter() callback, used to cancel filtering if necessary.
+     *
+     * @throws Exception
+     */
+    public function testBeforeDataFilterCallbackCancel(): void
+    {
+        $document2 = ClassRegistry::init('Document2');
+        if ($document2 instanceof Model) {
+            $this->Document = $document2;
+        } else {
+            throw new Exception('Can not create Document2 model');
+        }
+
+        $testOptions = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like'),
+            'DocumentCategory.id' => array('type' => 'select'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'DocumentCategory' => array('id' => 2)
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
+            array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44')),
+            array('Document' => array('id' => 3, 'title' => 'Nonexistant data', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-04-28 11:12:33', 'updated' => '2010-05-05 15:03:24')),
+            array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
+            array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+            array('Document' => array('id' => 6, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+            array('Document' => array('id' => 7, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test afterDataFilter() callback, used to modify the conditions after
+     * filter conditions have been applied.
+     * @throws Exception
+     */
+    public function testAfterDataFilterCallbackQueryChange(): void
+    {
+        $document = ClassRegistry::init('Document3');
+        if ($document instanceof Model) {
+            $this->Document = $document;
+        } else {
+            throw new Exception('Can not create Document3 model');
+        }
+        $this->Document->itemToUnset = 'FilterDocumentCategory.id';
+
+        $testOptions = array(
+            'Document.title' => array('type' => 'text', 'condition' => 'like'),
+            'DocumentCategory.id' => array('type' => 'select'),
+            'Document.is_private' => array('type' => 'checkbox', 'label' => 'Private?')
+        );
+        $this->_reattachBehavior($testOptions);
+
+        $filterValues = array(
+            'DocumentCategory' => array('id' => 2)
+        );
+        $this->Document->setFilterValues($filterValues);
+
+        $expected = array(
+            array('Document' => array('id' => 1, 'title' => 'Testing Doc', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-06-28 10:39:23', 'updated' => '2010-06-29 11:22:48')),
+            array('Document' => array('id' => 2, 'title' => 'Imaginary Spec', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-03-28 12:19:13', 'updated' => '2010-04-29 11:23:44')),
+            array('Document' => array('id' => 3, 'title' => 'Nonexistant data', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 0, 'created' => '2010-04-28 11:12:33', 'updated' => '2010-05-05 15:03:24')),
+            array('Document' => array('id' => 4, 'title' => 'Illegal explosives DIY', 'document_category_id' => 1, 'owner_id' => 1, 'is_private' => 1, 'created' => '2010-01-08 05:15:03', 'updated' => '2010-05-22 03:15:24')),
+            array('Document' => array('id' => 5, 'title' => 'Father Ted', 'document_category_id' => 2, 'owner_id' => 2, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+            array('Document' => array('id' => 6, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+            array('Document' => array('id' => 7, 'title' => 'Duplicate title', 'document_category_id' => 5, 'owner_id' => 3, 'is_private' => 0, 'created' => '2009-01-13 05:15:03', 'updated' => '2010-12-05 03:24:15')),
+        );
+
+        $result = $this->Document->find('all', array('recursive' => -1));
+        $this->assertEquals($expected, $result);
+    }
 }

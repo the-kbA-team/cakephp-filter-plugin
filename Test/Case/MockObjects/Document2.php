@@ -1,16 +1,43 @@
 <?php
 
+/**
+ * @mixin FilteredBehavior
+ * @property DocumentCategory $DocumentCategory
+ */
 class Document2 extends CakeTestModel
 {
-	public $name = 'Document';
-	public $alias = 'Document';
-	public $belongsTo = array('DocumentCategory');
-	public $hasMany = array('Item');
+    /**
+     * @var string
+     */
+    public $name = 'Document';
 
-	public $returnValue = false;
+    /**
+     * @var string
+     */
+    public $alias = 'Document';
 
-	public function beforeDataFilter($query, $options)
-	{
-		return $this->returnValue;
-	}
+    /**
+     * @var string[]
+     */
+    public $belongsTo = array('DocumentCategory');
+
+    /**
+     * @var string[]
+     */
+    public $hasMany = array('Item');
+
+    /**
+     * @var bool
+     */
+    public $returnValue = false;
+
+    /**
+     * @param array<mixed> $query
+     * @param array<mixed> $options
+     * @return bool
+     */
+    public function beforeDataFilter(array $query, array $options): bool
+    {
+        return $this->returnValue;
+    }
 }

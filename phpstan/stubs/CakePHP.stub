@@ -1,0 +1,16 @@
+<?php
+
+class CakeObject
+{
+}
+
+interface CakeEventListener
+{
+}
+
+class Controller extends CakeObject implements CakeEventListener {
+    /**
+     * @var string[]
+     */
+    public $helpers = array();
+}

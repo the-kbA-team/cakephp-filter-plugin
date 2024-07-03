@@ -1,26 +1,51 @@
 <?php
 
+/**
+ * @mixin FilteredBehavior
+ * @property DocumentCategory $DocumentCategory
+ */
 class Document3 extends CakeTestModel
 {
-	public $name = 'Document';
-	public $alias = 'Document';
-	public $belongsTo = array('DocumentCategory');
-	public $hasMany = array('Item');
+    /**
+     * @var string
+     */
+    public $name = 'Document';
 
-	public $itemToUnset = null;
+    /**
+     * @var string
+     */
+    public $alias = 'Document';
 
-	public function afterDataFilter($query, $options)
-	{
-		if (!is_string($this->itemToUnset))
-		{
-			return $query;
-		}
+    /**
+     * @var string[]
+     */
+    public $belongsTo = array('DocumentCategory');
 
-		if (isset($query['conditions'][$this->itemToUnset]))
-		{
-			unset($query['conditions'][$this->itemToUnset]);
-		}
+    /**
+     * @var string[]
+     */
+    public $hasMany = array('Item');
 
-		return $query;
-	}
+    /**
+     * @var null|string
+     */
+    public $itemToUnset = null;
+
+    /**
+     * @param array<string, array<string, mixed>> $query
+     * @param array<mixed> $options
+     * @return array<mixed>
+     */
+    public function afterDataFilter(array $query, array $options): array
+    {
+        if (!is_string($this->itemToUnset)) {
+            return $query;
+        }
+
+        if (isset($query['conditions'][$this->itemToUnset])) {
+            unset($query['conditions'][$this->itemToUnset]);
+        }
+
+        return $query;
+    }
 }

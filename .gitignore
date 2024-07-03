@@ -1,4 +1,7 @@
+/.idea/
 /.settings/
 /.buildpath
 /.project
-/Vendor/
+/vendor/
+/composer.lock
+.uuid

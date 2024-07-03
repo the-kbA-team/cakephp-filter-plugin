@@ -1,15 +1,15 @@
 <?php
 /**
-	CakePHP Filter Plugin
-
-	Copyright (C) 2009-3827 dr. Hannibal Lecter / lecterror
-	<http://lecterror.com/>
-
-	Multi-licensed under:
-		MPL <http://www.mozilla.org/MPL/MPL-1.1.html>
-		LGPL <http://www.gnu.org/licenses/lgpl.html>
-		GPL <http://www.gnu.org/licenses/gpl.html>
-*/
+ * CakePHP Filter Plugin
+ *
+ * Copyright (C) 2009-3827 dr. Hannibal Lecter / lecterror
+ * <http://lecterror.com/>
+ *
+ * Multi-licensed under:
+ * MPL <http://www.mozilla.org/MPL/MPL-1.1.html>
+ * LGPL <http://www.gnu.org/licenses/lgpl.html>
+ * GPL <http://www.gnu.org/licenses/gpl.html>
+ */
 
 App::import('Component', 'Session');
 App::import('Behavior', 'Filter.Filtered');
@@ -20,370 +20,355 @@ App::import('Behavior', 'Filter.Filtered');
  */
 class FilterComponent extends Component
 {
-	public $components = array('Session');
+    /**
+     * @var string[]
+     */
+    public $components = array('Session');
 
-	public $settings = array();
-	public $nopersist = array();
-	public $formData = array();
-	protected $_request_settings = array();
+    /**
+     * @var array<string, array<string, mixed>>
+     */
+    public $settings = array();
 
-	public function __construct(ComponentCollection $collection, $settings = array())
-	{
-		parent::__construct($collection, $settings);
-		$this->_request_settings = $settings;
-	}
+    /**
+     * @var array<mixed>
+     */
+    public $nopersist = array();
 
-	public function initialize(Controller $controller)
-	{
-		if (!isset($controller->filters))
-		{
-			return;
-		}
+    /**
+     * @var array<string, array<string, mixed>>
+     */
+    public $formData = array();
 
-		$this->__updatePersistence($controller, $this->_request_settings);
-		$this->settings[$controller->name] = $controller->filters;
+    /**
+     * @var array<mixed>
+     */
+    protected $_request_settings = array();
 
-		if (!isset($this->settings[$controller->name][$controller->request->action]))
-		{
-			return;
-		}
+    /**
+     * @param ComponentCollection $collection
+     * @param array<mixed> $settings
+     */
+    public function __construct(ComponentCollection $collection, $settings = array())
+    {
+        parent::__construct($collection, $settings);
+        $this->_request_settings = $settings;
+    }
 
-		$settings = $this->settings[$controller->name][$controller->request->action];
+    /**
+     * @param Controller $controller
+     * @return void
+     */
+    public function initialize(Controller $controller): void
+    {
+        if (!isset($controller->filters)) {
+            return;
+        }
 
-		foreach ($settings as $model => $filter)
-		{
-			if (!isset($controller->{$model}))
-			{
-				trigger_error(__('Filter model not found: %s', $model));
-				continue;
-			}
+        $this->__updatePersistence($controller, $this->_request_settings);
+        $this->settings[$controller->name] = $controller->filters;
 
-			$controller->$model->Behaviors->attach('Filter.Filtered', $filter);
-		}
-	}
+        if (!isset($this->settings[$controller->name][$controller->request->action])) {
+            return;
+        }
 
-	public function startup(Controller $controller)
-	{
-		if (!isset($this->settings[$controller->name][$controller->request->action]))
-		{
-			return;
-		}
+        $settings = $this->settings[$controller->name][$controller->request->action];
 
-		$settings = $this->settings[$controller->name][$controller->request->action];
+        foreach ($settings as $model => $filter) {
+            if (!isset($controller->{$model})) {
+                $errMsg = __('Filter model not found: %s', $model);
+                if (is_string($errMsg)) {
+                    throw new InvalidArgumentException($errMsg);
+                }
+                continue;
+            }
 
-		if (!in_array('Filter.Filter', $controller->helpers))
-		{
-			$controller->helpers[] = 'Filter.Filter';
-		}
+            $controller->$model->Behaviors->attach('Filter.Filtered', $filter);
+        }
+    }
 
-		$sessionKey = sprintf('FilterPlugin.Filters.%s.%s', $controller->name, $controller->request->action);
-		$filterFormId = $controller->request->query('filterFormId');
-		if ($controller->request->is('get') && !empty($filterFormId))
-		{
-			$this->formData = $controller->request->query('data');
-		}
-		elseif (!$controller->request->is('post') || !isset($controller->request->data['Filter']['filterFormId']))
-		{
-			$persistedData = array();
+    public function startup(Controller $controller)
+    {
+        if (!isset($this->settings[$controller->name][$controller->request->action])) {
+            return;
+        }
 
-			if ($this->Session->check($sessionKey))
-			{
-				$persistedData = $this->Session->read($sessionKey);
-			}
+        /** @var array<string, array<mixed>> $settings */
+        $settings = $this->settings[$controller->name][$controller->request->action];
 
-			if (empty($persistedData))
-			{
-				return;
-			}
+        if (!in_array('Filter.Filter', $controller->helpers)) {
+            $controller->helpers[] = 'Filter.Filter';
+        }
 
-			$this->formData = $persistedData;
-		}
-		else
-		{
-			$this->formData = $controller->request->data;
-			if ($this->Session->started())
-			{
-				$this->Session->write($sessionKey, $this->formData);
-			}
-		}
+        $sessionKey = sprintf('FilterPlugin.Filters.%s.%s', $controller->name, $controller->request->action);
+        $filterFormId = $controller->request->query('filterFormId');
+        if ($controller->request->is('get') && !empty($filterFormId)) {
+            $dataFromQuery = $controller->request->query('data');
+            if (is_array($dataFromQuery)) {
+                $this->formData = $dataFromQuery;
+            }
+        } elseif (!$controller->request->is('post') || !isset($controller->request->data['Filter']['filterFormId'])) {
+            $persistedData = array();
 
-		foreach ($settings as $model => $options)
-		{
-			if (!isset($controller->{$model}))
-			{
-				trigger_error(__('Filter model not found: %s', $model));
-				continue;
-			}
+            if ($this->Session->check($sessionKey)) {
+                $persistedData = $this->Session->read($sessionKey);
+            }
 
-			$controller->$model->setFilterValues($this->formData);
-		}
-	}
+            if (empty($persistedData) || !is_array($persistedData)) {
+                return;
+            }
 
-	public function beforeRender(Controller $controller)
-	{
-		if (!isset($this->settings[$controller->name][$controller->request->action]))
-		{
-			return;
-		}
+            $this->formData = $persistedData;
+        } else {
+            $this->formData = $controller->request->data;
+            if ($this->Session->started()) {
+                $this->Session->write($sessionKey, $this->formData);
+            }
+        }
 
-		$models = $this->settings[$controller->name][$controller->request->action];
-		$viewFilterParams = array();
+        foreach ($settings as $model => $options) {
+            if (!isset($controller->{$model})) {
+                $errMsg = __('Filter model not found: %s', $model);
+                if (is_string($errMsg)) {
+                    throw new InvalidArgumentException($errMsg);
+                }
+                continue;
+            }
 
-		foreach ($models as $model => $fields)
-		{
-			if (!isset($controller->$model))
-			{
-				trigger_error(__('Filter model not found: %s', $model));
-				continue;
-			}
+            $controller->$model->setFilterValues($this->formData);
+        }
+    }
 
-			foreach ($fields as $field => $settings)
-			{
-				if (!is_array($settings))
-				{
-					$field = $settings;
-					$settings = array();
-				}
+    public function beforeRender(Controller $controller)
+    {
+        if (!isset($this->settings[$controller->name][$controller->request->action])) {
+            return;
+        }
 
-				if (!isset($settings['required']))
-				{
-					$settings['required'] = false;
-				}
+        /** @var array<string, array<string, array<mixed>>> $models */
+        $models = $this->settings[$controller->name][$controller->request->action];
+        $viewFilterParams = array();
 
-				if (!isset($settings['type']))
-				{
-					$settings['type'] = 'text';
-				}
+        foreach ($models as $model => $fields) {
+            if (!isset($controller->$model)) {
+                $errMsg = __('Filter model not found: %s', $model);
+                if (is_string($errMsg)) {
+                    throw new InvalidArgumentException($errMsg);
+                }
+                continue;
+            }
 
-				$options = array();
+            foreach ($fields as $field => $settings) {
+                if (!is_array($settings)) {
+                    $field = $settings;
+                    $settings = array();
+                }
 
-				$fieldName = $field;
-				$fieldModel = $model;
+                if (!isset($settings['required'])) {
+                    $settings['required'] = false;
+                }
 
-				if (strpos($field, '.') !== false)
-				{
-					list($fieldModel, $fieldName) = explode('.', $field);
-				}
+                if (!isset($settings['type'])) {
+                    $settings['type'] = 'text';
+                }
 
-				if (!empty($this->formData))
-				{
-					if (isset($this->formData[$fieldModel][$fieldName]))
-					{
-						$options['value'] = $this->formData[$fieldModel][$fieldName];
+                $options = array();
 
-						if ($options['value'])
-						{
-							$options['class'] = 'filter-active';
-						}
-					}
-				}
+                $fieldName = $field;
+                $fieldModel = $model;
 
-				if (isset($settings['inputOptions']))
-				{
-					if (!is_array($settings['inputOptions']))
-					{
-						$settings['inputOptions'] = array($settings['inputOptions']);
-					}
+                if (strpos($field, '.') !== false) {
+                    list($fieldModel, $fieldName) = explode('.', $field);
+                }
 
-					$options = array_merge($options, $settings['inputOptions']);
-				}
+                if (!empty($this->formData)) {
+                    if (isset($this->formData[$fieldModel][$fieldName])) {
+                        $options['value'] = $this->formData[$fieldModel][$fieldName];
 
-				if (isset($settings['label']))
-				{
-					$options['label'] = $settings['label'];
-				}
+                        if ($options['value']) {
+                            $options['class'] = 'filter-active';
+                        }
+                    }
+                }
 
-				switch ($settings['type'])
-				{
-					case 'text':
-						$options['type'] = 'text';
-						break;
+                if (isset($settings['inputOptions'])) {
+                    if (!is_array($settings['inputOptions'])) {
+                        $settings['inputOptions'] = array($settings['inputOptions']);
+                    }
 
-					case 'select':
-						$options['type'] = 'select';
+                    $options = array_merge($options, $settings['inputOptions']);
+                }
 
-						$selectOptions = array();
-						$workingModel = ClassRegistry::init($fieldModel);
+                if (isset($settings['label'])) {
+                    $options['label'] = $settings['label'];
+                }
 
-						if (isset($settings['selectOptions']))
-						{
-							$selectOptions = $settings['selectOptions'];
-						}
+                switch ($settings['type']) {
+                    case 'text':
+                        $options['type'] = 'text';
+                        break;
 
-						if (isset($settings['selector']))
-						{
-							if (!method_exists($workingModel, $settings['selector']))
-							{
-								trigger_error
-									(
-										__(
-											'Selector method "%s" not found in model "%s" for field "%s"!',
-											$settings['selector'],
-											$fieldModel,
-											$fieldName
-										)
-									);
-								return;
-							}
+                    case 'select':
+                        $options['type'] = 'select';
 
-							$selectorName = $settings['selector'];
-							$options['options'] = $workingModel->$selectorName($selectOptions);
-						}
-						else
-						{
-							if ($fieldModel == $model)
-							{
-								$options['options'] = $workingModel->find
-									(
-										'list',
-										array_merge
-										(
-											$selectOptions,
-											array
-											(
-												'nofilter' => true,
-												'fields' => array($fieldName, $fieldName),
-											)
-										)
-									);
-							}
-							else
-							{
-								$options['options'] = $workingModel->find('list', array_merge($selectOptions, array('nofilter' => true)));
-							}
-						}
+                        $selectOptions = array();
+                        /** @var Model $workingModel */
+                        $workingModel = ClassRegistry::init($fieldModel);
 
-						if (!$settings['required'])
-						{
-							$options['empty'] = '';
-						}
+                        if (isset($settings['selectOptions'])) {
+                            $selectOptions = $settings['selectOptions'];
+                        }
 
-						if (isset($settings['multiple']))
-						{
-							$options['multiple'] = $settings['multiple'];
-						}
+                        if (isset($settings['selector'])) {
+                            if (!method_exists($workingModel, $settings['selector'])) {
+                                $errMsg = __(
+                                    'Selector method "%s" not found in model "%s" for field "%s"!',
+                                    $settings['selector'],
+                                    $fieldModel,
+                                    $fieldName
+                                );
+                                if (is_string($errMsg)) {
+                                    trigger_error($errMsg);
+                                }
+                                return;
+                            }
 
-						break;
+                            $selectorName = $settings['selector'];
+                            $options['options'] = $workingModel->$selectorName($selectOptions);
+                        } else {
+                            if ($fieldModel == $model) {
+                                $options['options'] = $workingModel->find
+                                (
+                                    'list',
+                                    array_merge
+                                    (
+                                        $selectOptions,
+                                        array
+                                        (
+                                            'nofilter' => true,
+                                            'fields' => array($fieldName, $fieldName),
+                                        )
+                                    )
+                                );
+                            } else {
+                                $options['options'] = $workingModel->find('list', array_merge($selectOptions, array('nofilter' => true)));
+                            }
+                        }
 
-					case 'checkbox':
-						$options['type'] = 'checkbox';
+                        if (!$settings['required']) {
+                            $options['empty'] = '';
+                        }
 
-						if (isset($options['value']))
-						{
-							$options['checked'] = !!$options['value'];
-							unset($options['value']);
-						}
-						else if (isset($settings['default']))
-						{
-							$options['checked'] = !!$settings['default'];
-						}
-						break;
+                        if (isset($settings['multiple'])) {
+                            $options['multiple'] = $settings['multiple'];
+                        }
 
-					default:
-						continue 2;
-				}
+                        break;
 
-				// if no value has been set, show the default one
-				if (!isset($options['value']) &&
-					isset($settings['default']) &&
-					$options['type'] != 'checkbox')
-				{
-					$options['value'] = $settings['default'];
-				}
+                    case 'checkbox':
+                        $options['type'] = 'checkbox';
 
-				$viewFilterParams[] = array
-					(
-						'name' => sprintf('%s.%s', $fieldModel, $fieldName),
-						'options' => $options
-					);
-			}
-		}
+                        if (isset($options['value'])) {
+                            $options['checked'] = !!$options['value'];
+                            unset($options['value']);
+                        } else if (isset($settings['default'])) {
+                            $options['checked'] = !!$settings['default'];
+                        }
+                        break;
 
-		if (!empty($this->settings['add_filter_value_to_title']) &&
-			array_search($controller->action, $this->settings['add_filter_value_to_title']) !== false)
-		{
-			$title = $controller->viewVars['title_for_layout'];
-			foreach ($viewFilterParams as $viewFilterParam)
-			{
-				if (!empty($viewFilterParam['options']['class']) &&
-					$viewFilterParam['options']['class'] == 'filter-active')
-				{
-					$titleValue = $viewFilterParam['options']['value'];
-					if ($viewFilterParam['options']['type'] == 'select')
-					{
-						$titleValue = $viewFilterParam['options']['options'][$titleValue];
-					}
-					$title .= ' - ' . $titleValue;
-				}
-			}
-			$controller->set('title_for_layout', $title);
-		}
-		$controller->set('viewFilterParams', $viewFilterParams);
-	}
+                    default:
+                        continue 2;
+                }
 
-	private function __updatePersistence($controller, $settings)
-	{
-		if ($this->Session->check('FilterPlugin.NoPersist'))
-		{
-			$this->nopersist = $this->Session->read('FilterPlugin.NoPersist');
-		}
+                // if no value has been set, show the default one
+                if (!isset($options['value']) &&
+                    isset($settings['default']) &&
+                    $options['type'] != 'checkbox') {
+                    $options['value'] = $settings['default'];
+                }
 
-		if (isset($settings['nopersist']))
-		{
-			$this->nopersist[$controller->name] = $settings['nopersist'];
-			if ($this->Session->started())
-			{
-				$this->Session->write('FilterPlugin.NoPersist', $this->nopersist);
-			}
-		}
-		else if (isset($this->nopersist[$controller->name]))
-		{
-			unset($this->nopersist[$controller->name]);
-			if ($this->Session->started())
-			{
-				$this->Session->write('FilterPlugin.NoPersist', $this->nopersist);
-			}
-		}
+                $viewFilterParams[] = array(
+                    'name' => sprintf('%s.%s', $fieldModel, $fieldName),
+                    'options' => $options
+                );
+            }
+        }
 
-		if (!empty($this->nopersist))
-		{
-			foreach ($this->nopersist as $nopersistController => $actions)
-			{
-				if (is_string($actions))
-				{
-					$actions = array($actions);
-				}
-				else if ($actions === true)
-				{
-					$actions = array();
-				}
+        if (!empty($this->settings['add_filter_value_to_title'])
+            && array_search($controller->action, $this->settings['add_filter_value_to_title']) !== false
+        ) {
+            $title = $controller->viewVars['title_for_layout'];
+            foreach ($viewFilterParams as $viewFilterParam) {
+                if (!empty($viewFilterParam['options']['class']) &&
+                    $viewFilterParam['options']['class'] == 'filter-active') {
+                    $titleValue = $viewFilterParam['options']['value'];
+                    if ($viewFilterParam['options']['type'] == 'select') {
+                        $titleValue = $viewFilterParam['options']['options'][$titleValue];
+                    }
+                    $title .= ' - ' . $titleValue;
+                }
+            }
+            $controller->set('title_for_layout', $title);
+        }
+        $controller->set('viewFilterParams', $viewFilterParams);
+    }
 
-				if (empty($actions) && $controller->name != $nopersistController)
-				{
-					if ($this->Session->check(sprintf('FilterPlugin.Filters.%s', $nopersistController)))
-					{
-						$this->Session->delete(sprintf('FilterPlugin.Filters.%s', $nopersistController));
-						continue;
-					}
-				}
+    /**
+     * @param Controller $controller
+     * @param array<mixed> $settings
+     * @return void
+     */
+    private function __updatePersistence(Controller $controller, array $settings): void
+    {
+        if ($this->Session->check('FilterPlugin.NoPersist')) {
+            $nopersistFromSession = $this->Session->read('FilterPlugin.NoPersist');
+            if (is_array($nopersistFromSession)) {
+                $this->nopersist = $nopersistFromSession;
+            }
+        }
 
-				foreach ($actions as $action)
-				{
-					if ($controller->name == $nopersistController && $action == $controller->request->action)
-					{
-						continue;
-					}
+        if (isset($settings['nopersist'])) {
+            $this->nopersist[$controller->name] = $settings['nopersist'];
+            if ($this->Session->started()) {
+                $this->Session->write('FilterPlugin.NoPersist', $this->nopersist);
+            }
+        } else if (isset($this->nopersist[$controller->name])) {
+            unset($this->nopersist[$controller->name]);
+            if ($this->Session->started()) {
+                $this->Session->write('FilterPlugin.NoPersist', $this->nopersist);
+            }
+        }
 
-					if ($this->Session->check(sprintf('FilterPlugin.Filters.%s.%s', $nopersistController, $action)))
-					{
-						$this->Session->delete(sprintf('FilterPlugin.Filters.%s.%s', $nopersistController, $action));
-					}
-				}
-			}
-		}
-	}
+        if (!empty($this->nopersist)) {
+            foreach ($this->nopersist as $nopersistController => $actions) {
+                if (is_string($actions)) {
+                    $actions = array($actions);
+                } else if ($actions === true) {
+                    $actions = array();
+                }
 
-	public function shutdown(Controller $controller)
-	{
-	}
+                /** @var string[] $actions */
+                if (empty($actions) && $controller->name != $nopersistController) {
+                    if ($this->Session->check(sprintf('FilterPlugin.Filters.%s', $nopersistController))) {
+                        $this->Session->delete(sprintf('FilterPlugin.Filters.%s', $nopersistController));
+                        continue;
+                    }
+                }
+
+                foreach ($actions as $action) {
+                    if ($controller->name == $nopersistController && $action == $controller->request->action) {
+                        continue;
+                    }
+
+                    if ($this->Session->check(sprintf('FilterPlugin.Filters.%s.%s', $nopersistController, $action))) {
+                        $this->Session->delete(sprintf('FilterPlugin.Filters.%s.%s', $nopersistController, $action));
+                    }
+                }
+            }
+        }
+    }
+
+    public function shutdown(Controller $controller)
+    {
+    }
 }

@@ -1,0 +1,15 @@
+parameters:
+    level: 9
+    scanDirectories:
+        - vendor
+    stubFiles:
+        - phpstan/stubs/CakePHP.stub
+    ignoreErrors:
+        - '/Function __ invoked with [0-9_]+ parameters, 1-2 required./'
+        - '/Access to an undefined property BehaviorCollection::\$Filtered./'
+        - '/Dead catch \- InvalidArgumentException is never thrown in the try block./'
+        - '/Unreachable statement \- code above always terminates./'
+        - '/Call to an undefined method Model::setFilterValues\(\)./'
+        - '/Call to an undefined method Model::getFilterValues\(\)./'
+        - '/Access to an undefined property Model::\$DocumentCategory./'
+        - '/Access to an undefined property Model::\$itemToUnset./'
