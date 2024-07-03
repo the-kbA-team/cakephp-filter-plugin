@@ -13,13 +13,14 @@
 
 App::uses('Router', 'Routing');
 App::uses('Component', 'Filter.Filter');
-App::uses('Document', 'Filter.Test/Case/MockObjects');
-App::uses('Document2', 'Filter.Test/Case/MockObjects');
-App::uses('Document3', 'Filter.Test/Case/MockObjects');
-App::uses('DocumentCategory', 'Filter.Test/Case/MockObjects');
 App::uses('DocumentTestsController', 'Filter.Test/Case/MockObjects');
-App::uses('Item', 'Filter.Test/Case/MockObjects');
-App::uses('Metadata', 'Filter.Test/Case/MockObjects');
+
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document2.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document3.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/DocumentCategory.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Item.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Metadata.php');
 
 class FilterComponentTest extends CakeTestCase
 {
@@ -433,16 +434,6 @@ class FilterComponentTest extends CakeTestCase
                 )
             )
         );
-
-        /**
-         * For some reason the mock object DocumentCategory is not found by
-         * ClassRegistry::init('DocumentCategory');
-         * in
-         * FilterComponent.php:216
-         * The following two lines adds the mock object as model class for DocumentCategory.
-         */
-        App::uses('DocumentCategory', 'Filter.Test/Case/MockObjects');
-        ClassRegistry::addObject('document_category', new DocumentCategory());
 
         $this->Controller->filters = $testSettings;
 
