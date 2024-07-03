@@ -12,15 +12,16 @@
  */
 
 App::import('Core', array('AppModel', 'Model'));
-App::uses('Document', 'Filter.Test/Case/MockObjects');
-App::uses('Document2', 'Filter.Test/Case/MockObjects');
-App::uses('Document3', 'Filter.Test/Case/MockObjects');
-App::uses('DocumentCategory', 'Filter.Test/Case/MockObjects');
 App::uses('DocumentTestsController', 'Filter.Test/Case/MockObjects');
-App::uses('Item', 'Filter.Test/Case/MockObjects');
-App::uses('Metadata', 'Filter.Test/Case/MockObjects');
 
-class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document2.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Document3.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/DocumentCategory.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Item.php');
+require_once(dirname(__FILE__, 3) . DS . 'MockObjects/Metadata.php');
+
+class FilteredBehaviorTest extends CakeTestCase
 {
     /**
      * @var string[]
@@ -34,7 +35,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     );
 
     /**
-     * @var AppModel|Document|Document2|Document3
+     * @var Model|Document|Document2|Document3
      */
     public $Document;
 
@@ -47,10 +48,9 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
         parent::setUp();
         $Document = ClassRegistry::init('Document');
 
-        if ($Document instanceof AppModel) {
+        if ($Document instanceof Model) {
             $this->Document = $Document;
         } else {
-            var_dump(get_class($Document));
             throw new Exception('Can not create Document model');
         }
     }
@@ -154,8 +154,12 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
         );
         $this->Document->setFilterValues($filterValues);
 
-        $this->expectException('PHPUnit_Framework_Error_Notice');
-        $this->Document->find('first');
+        try {
+            $this->Document->find('first');
+            $this->fail('InvalidArgumentException was not thrown');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame('No value present for required field Document.title and default value not present', $e->getMessage());
+        }
     }
 
     /**
@@ -630,7 +634,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     public function testBeforeDataFilterCallbackCancel(): void
     {
         $document2 = ClassRegistry::init('Document2');
-        if ($document2 instanceof AppModel) {
+        if ($document2 instanceof Model) {
             $this->Document = $document2;
         } else {
             throw new Exception('Can not create Document2 model');
@@ -670,7 +674,7 @@ class FilteredBehaviorTest extends \PHPUnit\Framework\TestCase
     public function testAfterDataFilterCallbackQueryChange(): void
     {
         $document = ClassRegistry::init('Document3');
-        if ($document instanceof AppModel) {
+        if ($document instanceof Model) {
             $this->Document = $document;
         } else {
             throw new Exception('Can not create Document3 model');

@@ -122,7 +122,7 @@ class FilteredBehavior extends ModelBehavior
             // TODO: implement a bit of a user friendly handling of this scenario..
             $errMsg = __('No value present for required field %s and default value not present', $field);
             if (is_string($errMsg)) {
-                trigger_error($errMsg);
+                throw new InvalidArgumentException($errMsg);
             }
             return;
         }
